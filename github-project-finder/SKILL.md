@@ -1,32 +1,63 @@
 ---
 name: github-project-finder
 description: This skill should be used when the user asks to "搜索 GitHub 项目", "找开源项目", "推荐 GitHub 仓库", "查找技术方案参考", or mentions "github search", "开源推荐", "项目调研". 搜索高质量开源项目并生成 Markdown 推荐报告。
-version: 0.1.0
+version: 0.2.0
 ---
 
 # GitHub 优质项目搜索 Skill
 
 搜索 GitHub 上的高质量开源项目，通过多源并行搜索策略发现优质项目，生成结构化的 Markdown 推荐报告。
 
-## 快速开始
+## 重要规则
 
-当用户请求搜索 GitHub 项目时，执行以下流程：
-1. 澄清用户需求（主题、语言、类型）
-2. 并行执行多源搜索
-3. 整合去重并评分
-4. 生成 Markdown 报告
+**必须遵守以下规则：**
+
+1. **必须先确认需求**：在执行任何搜索之前，必须使用 AskUserQuestion 工具向用户确认需求
+2. **必须使用英文关键词**：所有搜索查询必须使用英文关键词，GitHub 搜索对英文支持更好
+3. **必须等待用户确认**：只有在用户确认需求后才能开始搜索
 
 ## 工作流程
 
-### 阶段 1：需求澄清
+### 阶段 1：需求澄清（必须执行）
 
-**必须收集的信息：**
+**⚠️ 强制要求：必须使用 AskUserQuestion 工具收集以下信息，不能跳过！**
 
-| 信息项 | 说明 | 示例问题 |
-|--------|------|----------|
-| 核心需求/主题 | 用户想实现什么功能 | "您想开发什么类型的功能？" |
-| 编程语言 | 首选或可接受的语言 | "您希望使用什么编程语言？" |
-| 项目类型 | 库/框架/工具/应用 | "您需要库、框架还是完整应用参考？" |
+使用 AskUserQuestion 工具询问用户：
+
+```
+必须收集的信息：
+1. 核心需求/主题 - 用户想实现什么功能
+2. 编程语言 - 首选或可接受的语言
+3. 项目类型 - 库/框架/工具/应用
+```
+
+**AskUserQuestion 示例：**
+
+```json
+{
+  "questions": [
+    {
+      "header": "搜索目标",
+      "question": "请确认您的搜索需求，我理解您想找：[总结用户需求]。这个理解正确吗？",
+      "options": [
+        {"label": "正确，开始搜索", "description": "按照上述理解进行搜索"},
+        {"label": "需要补充", "description": "我想补充或修改需求"}
+      ],
+      "multiSelect": false
+    },
+    {
+      "header": "编程语言",
+      "question": "您希望使用什么编程语言？",
+      "options": [
+        {"label": "Python", "description": "Python 语言项目"},
+        {"label": "JavaScript/TypeScript", "description": "JS/TS 语言项目"},
+        {"label": "不限", "description": "任何语言都可以"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
 
 **可选信息（有默认值）：**
 
@@ -37,22 +68,30 @@ version: 0.1.0
 | 许可证偏好 | 不限 |
 | 推荐数量 | 15-20 个 |
 
-**确认模板：**
+### 阶段 2：关键词转换（必须执行）
 
-```
-让我确认一下您的需求：
-- 搜索目标：[功能需求]
-- 编程语言：[语言]
-- 项目类型：[类型]
-- 质量要求：Star ≥ [数值]，[时间范围]内有更新
-- 推荐数量：[数量]
+**⚠️ 强制要求：将用户的中文需求转换为英文搜索关键词！**
 
-以上理解是否正确？
-```
+**转换规则：**
+- 将中文技术术语翻译为对应的英文术语
+- 使用常见的英文技术词汇
+- 组合多个相关关键词
 
-### 阶段 2：多源并行搜索
+**转换示例：**
+
+| 用户需求（中文） | 搜索关键词（英文） |
+|------------------|-------------------|
+| AI 助手宠物玩具 | AI companion pet robot, virtual pet AI |
+| 长期记忆 | long-term memory, conversation memory |
+| 情感计算 | emotion detection, sentiment analysis |
+| 语音交互 | voice assistant, speech recognition |
+| 硬件机器人 | ESP32 robot, M5Stack robot, hardware AI |
+
+### 阶段 3：多源并行搜索
 
 执行四种搜索源的并行搜索，最大化项目发现范围。
+
+**⚠️ 所有搜索查询必须使用英文！**
 
 **搜索源组合策略：**
 
@@ -69,23 +108,23 @@ version: 0.1.0
 1. **GitHub API 搜索**
    使用 `scripts/search_github.py` 脚本：
    ```bash
-   python scripts/search_github.py --query "{keyword}" --language "{lang}" --min-stars {min} --limit 20
+   python scripts/search_github.py --query "english keywords" --language "{lang}" --min-stars {min} --limit 20
    ```
    或直接使用 curl：
    ```bash
-   curl -s "https://api.github.com/search/repositories?q={keywords}+language:{lang}+stars:>{min_stars}&sort=stars&per_page=20"
+   curl -s "https://api.github.com/search/repositories?q=english+keywords+language:{lang}+stars:>{min_stars}&sort=stars&per_page=20"
    ```
 
-2. **WebSearch 搜索**
+2. **WebSearch 搜索**（使用英文查询）
    执行以下搜索查询：
-   - `awesome-{keyword} github` - 发现 awesome 列表
-   - `best {keyword} libraries {year}` - 年度推荐
-   - `site:dev.to OR site:medium.com {keyword} best libraries` - 技术博客推荐
+   - `awesome-{english-keyword} github` - 发现 awesome 列表
+   - `best {english-keyword} libraries {year}` - 年度推荐
+   - `site:dev.to OR site:medium.com {english-keyword} best libraries` - 技术博客推荐
 
 3. **GitHub Topics 发现**
    访问相关 topics 页面或使用 API：
    ```bash
-   curl -s "https://api.github.com/search/repositories?q=topic:{topic}&sort=stars&per_page=20"
+   curl -s "https://api.github.com/search/repositories?q=topic:{english-topic}&sort=stars&per_page=20"
    ```
 
 **第二层搜索（基于第一层结果）：**
@@ -102,7 +141,7 @@ version: 0.1.0
    repo:^github\.com/{owner}/{repo}$ type:file
    ```
 
-### 阶段 3：结果整合
+### 阶段 4：结果整合
 
 **去重规则：**
 - 按 `owner/repo` 去重
@@ -114,7 +153,7 @@ version: 0.1.0
 - 被 3 个以上源发现：+10 分
 - 出现在 awesome 列表：+5 分
 
-### 阶段 4：质量评估
+### 阶段 5：质量评估
 
 使用综合评分算法对项目进行排序。详细评估标准参见 `references/quality-criteria.md`。
 
@@ -142,7 +181,7 @@ version: 0.1.0
 - 有 CI/CD 配置：+3
 - 有完整文档站点：+5
 
-### 阶段 5：生成报告
+### 阶段 6：生成报告
 
 **询问保存位置：**
 ```
@@ -196,34 +235,36 @@ version: 0.1.0
 
 详细的多源搜索语法参见 `references/search-syntax.md`。
 
-### GitHub API 常用查询
+### GitHub API 常用查询（必须使用英文）
 
 ```bash
 # 按关键词和语言搜索
-q={keyword}+language:{lang}+stars:>{min}
+q=web+framework+language:python+stars:>100
 
 # 按 topic 搜索
-q=topic:{topic}+stars:>{min}
+q=topic:machine-learning+stars:>100
 
 # 按更新时间筛选
-q={keyword}+pushed:>{date}
+q=chatbot+pushed:>2024-01-01
 
 # 组合查询
-q={keyword}+language:python+stars:>100+pushed:>2024-01-01
+q=voice+assistant+language:python+stars:>100+pushed:>2024-01-01
 ```
 
-### WebSearch 搜索模式
+### WebSearch 搜索模式（必须使用英文）
 
 ```
 # Awesome 列表发现
-awesome-{keyword} github
+awesome-python github
+awesome-chatbot github
 
 # 年度推荐
-best {keyword} libraries 2024
+best python web frameworks 2024
+best AI companion libraries 2024
 
 # 技术博客
-site:dev.to {keyword} best libraries
-site:medium.com {keyword} recommendations
+site:dev.to voice assistant best libraries
+site:medium.com AI pet robot recommendations
 ```
 
 ## 错误处理
@@ -235,16 +276,18 @@ site:medium.com {keyword} recommendations
 
 **搜索无结果处理：**
 - 放宽搜索条件（降低 star 要求）
-- 尝试相关关键词
+- 尝试相关英文关键词
 - 使用 WebSearch 发现替代方案
 
 ## 注意事项
 
-1. **优先无 Token 模式**：使用公开 API，注意 60 次/小时限制
-2. **并行搜索**：尽可能并行执行多个搜索源以提高效率
-3. **结果验证**：对高分项目进行二次验证，确保信息准确
-4. **用户确认**：在生成报告前确认保存位置
-5. **中文输出**：所有输出和交互使用中文
+1. **必须先确认需求**：使用 AskUserQuestion 工具确认用户需求后再搜索
+2. **必须使用英文关键词**：所有搜索查询使用英文，提高搜索效果
+3. **优先无 Token 模式**：使用公开 API，注意 60 次/小时限制
+4. **并行搜索**：尽可能并行执行多个搜索源以提高效率
+5. **结果验证**：对高分项目进行二次验证，确保信息准确
+6. **用户确认**：在生成报告前确认保存位置
+7. **中文输出**：所有输出和交互使用中文（但搜索用英文）
 
 ## 参考资料
 

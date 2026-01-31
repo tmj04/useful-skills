@@ -7,6 +7,7 @@ GitHub 项目搜索脚本
 """
 
 import argparse
+import io
 import json
 import sys
 import urllib.request
@@ -14,6 +15,11 @@ import urllib.parse
 import urllib.error
 from datetime import datetime
 from typing import Optional
+
+# 修复 Windows 控制台 UTF-8 输出问题
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 
 def search_repositories(
