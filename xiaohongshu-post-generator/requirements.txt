@@ -1,0 +1,13 @@
+# 小红书图文帖子生成 Skill 依赖
+
+# 图片处理
+Pillow>=10.0.0
+
+# Google Gemini API
+google-genai>=1.0.0
+
+# 百炼/通义万相 API
+dashscope>=1.20.0
+
+# Docx 文档解析
+python-docx>=1.0.0
